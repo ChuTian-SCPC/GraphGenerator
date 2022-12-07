@@ -316,11 +316,15 @@ class Graph {
 			e.clear();
 			int m=side;
 			if(multiply_edge==0) {
-				long long max=( long long)node*( long long)(node-1);
-				if(direction==0) {
-					max/=2;
+				long long max=( long long)node*( long long)(node-1)/2;
+				if(self_loop==1){
+					max+=node;
 				}
-				m=std::min(( long long)side,max);
+				if(direction==1) {
+					max*=2;
+				}
+				
+				m=std::min((long long)side,max);
 			}
 			if(connect) {
 				m=std::max(0,m-(node-1));
@@ -490,7 +494,10 @@ class DAG:public Graph{
 			edge.clear();
 			e.clear();
 			std::vector<int> p(node);
-			int m=std::min(side,node*(node-1)/2);
+			int m=side;
+			if(multiply_edge==0){
+				m=std::min(side,node*(node-1)/2);
+			}
 			for(int i=0;i<node;i++){
 				p[i]=i;
 			}
@@ -751,29 +758,39 @@ class GridGraph:public Graph{
 		void GenGraph(){
 			edge.clear();
 			e.clear();
-			int m,column,row;
-			std::pair<int,int> max={0,0};
-			std::vector<int> possible,p(node);
+			int m=side,column,row;
+			std::vector<int> p(node);
 			int d[4][2]={{1,0},{-1,0},{0,1},{0,-1}};
-			for(int i=1;i<node;i++){
-				int x=i,y=(node+i-1)/i;
-				int w=CountSide(y,x);
-				if(w>max.first){
-					max={w,i};
+			if(multiply_edge==0){
+				std::pair<int,int> max={0,0};
+				std::vector<int> possible;	
+				for(int i=1;i<=node;i++){
+					int x=i,y=(node+i-1)/i;
+					int w=CountSide(y,x);
+					if(direction==1){
+						w*=2;
+					}
+					if(w>max.first){
+						max={w,i};
+					}
+					if(w>=side){
+						possible.push_back(i);
+					}
 				}
-				if(w>=side){
-					possible.push_back(i);
+				if(possible.size()==0){
+					m=max.first;
+					row=max.second;
+					column=(node+row-1)/row;
 				}
-			}
-			if(possible.size()==0){
-				m=max.first;
-				row=max.second;
-				column=(node+row-1)/row;
+				else{
+					row=rnd.any(possible);
+					column=(node+row-1)/row;
+					m=CountSide(column,row);
+				}
 			}
 			else{
-				row=rnd.any(possible);
+				row=rnd.next(1,node);
 				column=(node+row-1)/row;
-				m=CountSide(column,row);
 			}
 			m=std::max(0,m-(node-1));
 			for(int i=0;i<node;i++){
