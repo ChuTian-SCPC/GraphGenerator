@@ -1,5 +1,6 @@
 #include"testlib.h"
 
+namespace Generator{
 //树的基类
 class Tree {
 	protected:
@@ -223,7 +224,9 @@ class Graph {
 			return self_loop==0 && u==v;
 		}
 		bool JudgeMultiplyEdge(int u,int v) {
+			if(multiply_edge==1)	return false;
 			if(e[ {u,v}])	return true;
+			if(direction == 0 && e[{v,u}])	return true;
 			return false;
 		}
 		void AddEdge(int u,int v) {
@@ -385,37 +388,44 @@ class BipartiteGraph:public Graph {
 		}
 		/**
 		 * 生成图
+		 * @param left 指定左部大小
 		*/
-		void GenGraph() {
+		void GenGraph(int left=-1) {
 			edge.clear();
 			e.clear();
 			int m=side;
 			if(multiply_edge==0) {
 				long long max=( long long)(node/2)*( long long)((node+1)/2);
 				m=std::min(( long long)side,max);
+				if(left!=-1){
+					m=std::min((long long)left*(node-left),(long long )m);
+				}
 			}
-			int left,right;
+			int right;
 			std::vector<int> part[2];
-			int l=1,r=node/2,limit;
-			if(multiply_edge==0){
-				while(l<=r){
-					int mid=(l+r)/2;
-					if(mid*(node-mid)<m){
-						l=mid+1;
-					}
-					else{
-						limit=r;
-						r=mid-1;
-					}
-				}	
-			}
-			else{
-				limit=1;
-			}
-			do {
+			if(left==-1){
+				int l=1,r=node/2,limit;
+				if(multiply_edge==0){
+					while(l<=r){
+						int mid=(l+r)/2;
+						if(mid*(node-mid)<m){
+							l=mid+1;
+						}
+						else{
+							limit=r;
+							r=mid-1;
+						}
+					}	
+				}
+				else{
+					limit=1;
+				}
 				left=rnd.next(limit,node/2);
 				right=node-left;
-			} while(left*right<m);
+			}
+			else{
+				right=node-left;
+			}			
 			std::vector<int> p(node);
 			for(int i=0; i<node; i++) {
 				p[i]=i;
@@ -514,10 +524,10 @@ class DAG:public Graph{
 				do{
 					u=rnd.next(node);
 					v=rnd.next(node);
-				}while(JudgeSelfLoop(p[u],p[v]) || JudgeMultiplyEdge(p[u],p[v]));
-				if(u>v){
-					std::swap(u,v);
-				}
+					if(u>v){
+						std::swap(u,v);
+					}
+				}while(JudgeSelfLoop(p[u],p[v]) || JudgeMultiplyEdge(p[u],p[v]));				
 				AddEdge(p[u],p[v]);
 			}
 		}
@@ -911,7 +921,7 @@ class PseudoTree:public Graph{
 			}
 			shuffle(p.begin(),p.end());
 			CycleGraph cycle;
-			std::vector<int> pre(p.begin(),p.begin()+size);
+			std::vector<int> pre(p.begin(),p.begin()+size);	
 			cycle.GenGraph(pre);
 			edge=cycle.GetEdge();
 			for(int i=size;i<node;i++){
@@ -969,7 +979,7 @@ class PseudoInTree:public PseudoTree{
 			}
 			shuffle(p.begin(),p.end());
 			CycleGraph cycle;
-			cycle.SetDirection(1);
+			cycle.SetDirection(true);
 			std::vector<int> pre(p.begin(),p.begin()+size);
 			cycle.GenGraph(pre);
 			edge=cycle.GetEdge();
@@ -1149,3 +1159,4 @@ class Cactus:public Graph{
 			shuffle(edge.begin(),edge.end());
 		}
 };
+}
