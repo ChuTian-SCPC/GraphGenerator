@@ -5,6 +5,8 @@
 
 默认结点编号都是从0开始。
 
+最开始加上```using namespace Generator;```
+
 ### Tree
 
 比较随机的树的生成方式，并不是按照完全随机（purfer序列）生成的。
