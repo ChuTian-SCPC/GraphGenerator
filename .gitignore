@@ -3,3 +3,6 @@ CMakeLists.txt
 main.cpp
 testlib.h
 run.sh
+a.cpp
+b.txt
+c.txt
