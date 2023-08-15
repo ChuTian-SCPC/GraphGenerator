@@ -9,16 +9,15 @@ void FailGen(const char* msg, ...) {
     exit(EXIT_FAILURE);
 }
 
-namespace Generator {
-
-unsigned int NODE_LIMIT = 1e6;  // 结点数的上限
-unsigned int EDGE_LIMIT = 1e6;  // 边数的上限
-unsigned int BEGIN_NODE = 1;    // 结点开始编号
+namespace generator {
 
 // 一颗随机生成的树,默认为无根
 class Tree {
    protected:
-    int node;  // 结点数
+    unsigned int node_limit = 1e6;  // 结点数的上限
+    unsigned int edge_limit = 1e6;  // 边数的上限
+    int begin_node = 1;             // 结点开始编号
+    int node;                       // 结点数
     // 是否是有根树,默认为false,如果是有根树的话，边为(father,son);否则边为(father,son)与(son,father)中的任意一个
     bool is_root;
     int root;                               // 根，默认为1,只在is_rooted=1的时候生效
@@ -28,20 +27,20 @@ class Tree {
         if (node <= 0) {
             FailGen("node must be a positive integer.\n");
         }
-        if (node > NODE_LIMIT) {
+        if (node > node_limit) {
             FailGen(
                 "node must less than or equal to %d, or you can change the "
-                "NODE_LIMIT.\n",
-                NODE_LIMIT);
+                "node_limit.\n",
+                node_limit);
         }
         if (is_root && (root < 0 || root > node - 1)) {
-            FailGen("restriction of the root is [%d,%d]\n", BEGIN_NODE,
-                    node - 1 + BEGIN_NODE);
+            FailGen("restriction of the root is [%d,%d]\n", begin_node,
+                    node - 1 + begin_node);
         }
     }
     void Init() {
         if (is_root) {
-            root -= BEGIN_NODE;
+            root -= begin_node;
         }
         JudgeLimits();
         edge.clear();
@@ -56,8 +55,8 @@ class Tree {
         }
     }
     void AddEdge(int u, int v) {
-        u += BEGIN_NODE;
-        v += BEGIN_NODE;
+        u += begin_node;
+        v += begin_node;
         if (is_root || rnd.next(2)) {
             edge.push_back({u, v});
         } else {
@@ -70,7 +69,7 @@ class Tree {
      * 默认为无根树
      * @param n 结点数
      * @param is_rt 是否有根
-     * @param rt 根,默认为0,范围应为[BEGIN_NODE,n-1+BEGIN_NODE],只在is_root=true时生效
+     * @param rt 根,默认为0,范围应为[begin_node,n-1+begin_node],只在is_root=true时生效
      */
     Tree(int n = 1, bool is_rt = 0, int rt = 0) {
         node = n;
@@ -95,10 +94,10 @@ class Tree {
     /**
      * 获取根，只在有根的时候有效
      * @return 根
-    */
-    int GetRoot(){
-        if(is_root){
-            return root+BEGIN_NODE;
+     */
+    int GetRoot() {
+        if (is_root) {
+            return root + begin_node;
         }
         FailGen("Unroot Tree,but ask for get root.\n");
         return 0;
@@ -108,6 +107,24 @@ class Tree {
      * @return 边
      */
     std::vector<std::pair<int, int>> GetEdge() { return edge; }
+    /**
+     * 设置点数上限
+     */
+    void SetNodeLimit(unsigned int n) {
+        node_limit = n;
+    }
+    /**
+     * 设置边数上限
+     */
+    void SetEdgeLimit(unsigned int m) {
+        edge_limit = m;
+    }
+    /**
+     * 设置第一个结点的编号
+     */
+    void SetBeginNode(int n) {
+        begin_node = n;
+    }
     /**
      * 生成树
      */
@@ -243,6 +260,9 @@ class HeightTree : public Tree {
 // 普通图
 class Graph {
    protected:
+    unsigned int node_limit = 1e6;          // 结点数的上限
+    unsigned int edge_limit = 1e6;          // 边数的上限
+    int begin_node = 1;                     // 结点开始编号
     int node, side;                         // 点数，边数
     std::vector<std::pair<int, int>> edge;  // 边
     std::map<std::pair<int, int>, bool> e;  // 边的去重
@@ -270,9 +290,9 @@ class Graph {
      *默认不保证连通
      */
     bool connect;
-    bool JudgeSelfLoop(int u, int v) { return self_loop == 0 && u == v; }
+    bool JudgeSelfLoop(int u, int v) { return self_loop == false && u == v; }
     bool JudgeMultiplyEdge(int u, int v) {
-        if (multiply_edge == 1)
+        if (multiply_edge == true)
             return false;
         if (e[{u, v}])
             return true;
@@ -283,13 +303,13 @@ class Graph {
     void AddEdge(int u, int v) {
         if (multiply_edge == false) {
             e[{u, v}] = 1;
-            if (direction == 0) {
+            if (direction == false) {
                 e[{v, u}] = 1;
             }
         }
-        u += BEGIN_NODE;
-        v += BEGIN_NODE;
-        if (direction == 1) {
+        u += begin_node;
+        v += begin_node;
+        if (direction == true) {
             edge.push_back({u, v});
         } else {
             if (rnd.next(2)) {
@@ -319,11 +339,11 @@ class Graph {
         if (side < 0) {
             FailGen("number of edges must be a non-negative integer.\n");
         }
-        if (side > EDGE_LIMIT) {
+        if (side > edge_limit) {
             FailGen(
                 "number of edges must less than or equal to %d, or you can change "
-                "the EDGE_LIMIT.\n",
-                EDGE_LIMIT);
+                "the edge_limit.\n",
+                edge_limit);
         }
         JudgeUpper();
         if (connect) {
@@ -367,7 +387,7 @@ class Graph {
      * @param f 0：无向;1：有向;默认无向图
      */
     void SetDirection(bool f) { direction = f; }
-    /**
+    /** Refactor for C++
      * 设置能不能存在重边
      * @param f 0：无重边;1：有重边;默认无重边
      */
@@ -386,6 +406,24 @@ class Graph {
      * 获取边
      */
     std::vector<std::pair<int, int>> GetEdge() { return edge; }
+    /**
+     * 设置点数上限
+     */
+    void SetNodeLimit(unsigned int n) {
+        node_limit = n;
+    }
+    /**
+     * 设置边数上限
+     */
+    void SetEdgeLimit(unsigned int m) {
+        edge_limit = m;
+    }
+    /**
+     * 设置第一个结点的编号
+     */
+    void SetBeginNode(int n) {
+        begin_node = n;
+    }
     /**
      * 生成图
      */
@@ -571,4 +609,658 @@ class BipartiteGraph : public Graph {
         shuffle(edge.begin(), edge.end());
     }
 };
-}  // namespace Generator
+/**
+ * DAG
+ * @note 强制设self_loop=0,direction=1
+ */
+class DAG : public Graph {
+   public:
+    /**
+     * @param n 结点数
+     * @param m 边数
+     * @note 其余参数默认如下：
+     * @note direction=1 有向图
+     * @note multiply_edge=0 无重边
+     * @note self_loop=0 无自环
+     * @note connect=0 不保证连通
+     */
+    DAG(int n = 1, int m = 0) {
+        node = n;
+        side = m;
+        direction = 1;
+        multiply_edge = 0;
+        self_loop = 0;
+        connect = 0;
+    }
+    /**
+     * 强制无向图,禁用函数
+     */
+    void SetDirection(bool f) = delete;
+    /**
+     * 强制无自环,禁用函数
+     */
+    void SetSelfLoop(bool f) = delete;
+    /**
+     * 生成图
+     */
+    void GenGraph() {
+        edge.clear();
+        e.clear();
+        JudgeLimits();
+        std::vector<int> p(node);
+        int m = side;
+        for (int i = 0; i < node; i++) {
+            p[i] = i;
+        }
+        shuffle(p.begin(), p.end());
+        if (connect) {
+            m = std::max(0, m - (node - 1));
+            for (int i = 1; i < node; i++) {
+                int f = rnd.next(i);
+                AddEdge(p[f], p[i]);
+            }
+        }
+        while (m--) {
+            int u, v;
+            do {
+                u = rnd.next(node);
+                v = rnd.next(node);
+                if (u > v) {
+                    std::swap(u, v);
+                }
+            } while (JudgeSelfLoop(p[u], p[v]) || JudgeMultiplyEdge(p[u], p[v]));
+            AddEdge(p[u], p[v]);
+        }
+    }
+};
+/**
+ * 环图
+ * @note 强制设self_loop=0,connect=1,multiply_edge=0,side=n
+ */
+class CycleGraph : public Graph {
+   public:
+    /**
+     * @param n 结点数
+     * @note 其余参数默认如下：
+     * @note side=n 边数固定
+     * @note direction=0 无向图
+     * @note multiply_edge=0 无重边
+     * @note self_loop=0 无自环
+     * @note connect=1 保证连通
+     */
+    CycleGraph(int n = 1) {
+        node = n;
+        side = n;
+        direction = 0;
+        multiply_edge = 0;
+        self_loop = 0;
+        connect = 1;
+    }
+    /**
+     * 设置点数
+     * @param n 节点数
+     */
+    void SetNode(int n) {
+        node = n;
+        side = n;
+    }
+    /**
+     * 强制边数等于点数，禁用函数
+     */
+    void SetSide(int m) = delete;
+    /**
+     * 强制无重边，禁用函数
+     */
+    void SetMultiplyEdge(bool f) = delete;
+    /**
+     * 强制无自环，禁用函数
+     */
+    void SetSelfLoop(bool f) = delete;
+    /**
+     * 强制连通，禁用函数
+     */
+    void SetConnect(bool f) = delete;
+    /**
+     * 根据点集生成图
+     * @param a 点集
+     * @attention 如果结点集合有重复点则会产生错误
+     */
+    void GenGraph(std::vector<int> a) {
+        edge.clear();
+        e.clear();
+        int n = a.size();
+        for (int i = 1; i < n; i++) {
+            AddEdge(a[i], a[i - 1]);
+        }
+        if (JudgeSelfLoop(a[0], a[n - 1]) == 0 && JudgeMultiplyEdge(a[0], a[n - 1]) == 0) {
+            AddEdge(a[0], a[n - 1]);
+        }
+    }
+    /**
+     * 根据结点数生成图
+     */
+    void GenGraph() {
+        std::vector<int> p(node);
+        for (int i = 0; i < node; i++) {
+            p[i] = i;
+        }
+        shuffle(p.begin(), p.end());
+        GenGraph(p);
+        shuffle(edge.begin(), edge.end());
+    }
+};
+/**
+ * 轮图
+ * @note 强制设self_loop=0,connect=1,multiply_edge=0,side=2n-2
+ */
+class WheelGraph : public Graph {
+   public:
+    /**
+     * @param n 结点数
+     * @note 其余参数默认如下：
+     * @note side=2*n-2 边数固定
+     * @note direction=0 无向图
+     * @note multiply_edge=0 无重边
+     * @note self_loop=0 无自环
+     * @note connect=1 保证连通
+     */
+    WheelGraph(int n = 1) {
+        node = n;
+        side = 2 * n - 2;
+        direction = 0;
+        multiply_edge = 0;
+        self_loop = 0;
+        connect = 1;
+    }
+    /**
+     * 设置结点数
+     * @param n 结点数
+     */
+    void SetNode(int n) {
+        node = n;
+        side = 2 * n - 2;
+    }
+    /**
+     * 强制边数等于2*node-2，禁用函数
+     */
+    void SetSide(int m) = delete;
+    /**
+     * 强制无重边，禁用函数
+     */
+    void SetMultiplyEdge(bool f) = delete;
+    /**
+     * 强制无自环，禁用函数
+     */
+    void SetSelfLoop(bool f) = delete;
+    /**
+     * 强制连通，禁用函数
+     */
+    void SetConnect(bool f) = delete;
+    /**
+     * 根据指定支配点和其余点生成图
+     * @param v 指定点
+     * @param p 其余点
+     * @attention 如果结点集合有重复点则会产生错误
+     */
+    void GenGraph(int v, std::vector<int> p) {
+        edge.clear();
+        e.clear();
+        CycleGraph cycle;
+        cycle.GenGraph(p);
+        edge = cycle.GetEdge();
+        for (int i = 0; i < p.size(); i++) {
+            AddEdge(v, p[i]);
+        }
+        shuffle(edge.begin(), edge.end());
+    }
+    /**
+     * 根据指定点生成图，支配点随机
+     * @param p 点集，不可为空
+     * @attention 如果结点集合有重复点则会产生错误
+     */
+    void GenGraph(std::vector<int> p) {
+        shuffle(p.begin(), p.end());
+        std::vector<int> pre(p.begin() + 1, p.end());
+        GenGraph(p[0], pre);
+    }
+    /**
+     * 根据点数生成图
+     */
+    void GenGraph() {
+        std::vector<int> p(node);
+        for (int i = 0; i < node; i++) {
+            p[i] = i;
+        }
+        GenGraph(p);
+    }
+};
+/**
+ * 网格图
+ * @note 强制设connect=1,self_loop=0
+ */
+class GridGraph : public Graph {
+   protected:
+    long long CountSide(int x, int y) {
+        long long xl = (long long)x;
+        long long yl = (long long)y;
+        long long sum = xl * (yl - 1) + yl * (xl - 1) - 2 * ((yl - node % yl) % yl);
+        if (direction == 1) {
+            sum *= 2;
+        }
+        return sum;
+    }
+    virtual void JudgeUpper() {
+        long long limit = 0;
+        if (!multiply_edge) {
+            int x = sqrt(node), y = (node + x - 1) / x;
+            limit = CountSide(x, y);
+            if (direction) {
+                limit *= 2;
+            }
+            if (side > limit) {
+                FailGen("number of edges must less than or equal to %lld.\n",
+                        limit);
+            }
+        }
+    }
+
+   public:
+    /**
+     * @param n 结点数
+     * @param m 边数
+     * @note 其余参数默认如下：
+     * @note direction=0 无向图
+     * @note multiply_edge=0 无重边
+     * @note self_loop=0 无自环
+     * @note connect=1 保证连通
+     */
+    GridGraph(int n = 1, int m = 0) {
+        node = n;
+        side = m;
+        direction = 0;
+        multiply_edge = 0;
+        self_loop = 0;
+        connect = 1;
+    }
+    /**
+     * 强制无自环，禁用函数
+     */
+    void SetSelfLoop(bool f) = delete;
+    /**
+     * 强制连通，禁用函数
+     */
+    void SetConnect(bool f) = delete;
+    /**
+     * 生成图
+     */
+    void GenGraph() {
+        edge.clear();
+        e.clear();
+        JudgeLimits();
+        int m = side, column, row;
+        std::vector<int> p(node);
+        int d[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        if (multiply_edge == 0) {
+            std::pair<int, int> max = {0, 0};
+            std::vector<int> possible;
+            for (int i = 1; i <= node; i++) {
+                int x = i, y = (node + i - 1) / i;
+                long long w = CountSide(y, x);
+                if (direction == 1) {
+                    w *= 2;
+                }
+                if (w > max.first) {
+                    max = {w, i};
+                }
+                if (w >= side) {
+                    possible.push_back(i);
+                }
+            }
+            if (possible.size() == 0) {
+                m = max.first;
+                row = max.second;
+                column = (node + row - 1) / row;
+            } else {
+                row = rnd.any(possible);
+                column = (node + row - 1) / row;
+                m = CountSide(column, row);
+            }
+        } else {
+            row = rnd.next(1, node);
+            column = (node + row - 1) / row;
+        }
+        m = std::max(0, m - (node - 1));
+        for (int i = 0; i < node; i++) {
+            p[i] = i;
+        }
+        shuffle(p.begin(), p.end());
+        for (int i = 0; i < row; i++) {
+            for (int j = 1; j < column; j++) {
+                int x = i * column + j, y = x - 1;
+                if (x >= node) continue;
+                if (i % 2 == 0) {
+                    AddEdge(p[y], p[x]);
+                } else {
+                    AddEdge(p[x], p[y]);
+                }
+            }
+            int x = i * column, y = (i + 1) * column;
+            if (x < node && y < node) {
+                AddEdge(p[x], p[y]);
+            }
+        }
+        while (m--) {
+            int pos, k, px, py, nxt;
+            do {
+                pos = rnd.next(node);
+                k = rnd.next(4);
+                px = pos / column + d[k][0];
+                py = pos % column + d[k][1];
+                nxt = px * column + py;
+            } while (px < 0 || px >= row || py < 0 || py >= column || nxt >= node || JudgeMultiplyEdge(p[pos], p[nxt]));
+            AddEdge(p[pos], p[nxt]);
+        }
+        shuffle(edge.begin(), edge.end());
+    }
+};
+/**
+ * 基环树
+ * @note 强制设self_loop=0,connect=1,multiply_edge=0,direction=0,side=n
+ */
+class PseudoTree : public Graph {
+   public:
+    /**
+     * @param n 结点数
+     * @attention n>=3,否则会产生问题
+     * @note 其余参数默认如下：
+     * @note side=n 边数固定
+     * @note direction=0 无向图
+     * @note multiply_edge=0 无重边
+     * @note self_loop=0 无自环
+     * @note connect=1 保证连通
+     */
+    PseudoTree(int n = 3) {
+        node = n;
+        side = n;
+        direction = 0;
+        multiply_edge = 0;
+        self_loop = 0;
+        connect = 1;
+    }
+    /**
+     * 设置点数
+     * @param n 点数
+     */
+    void SetNode(int n) {
+        node = n;
+        side = node;
+    }
+    /**
+     * 强制边数等于点数，禁用函数
+     */
+    void SetSide(int m) = delete;
+    /**
+     * 强制无向，禁用函数
+     */
+    void SetDirection(bool f) = delete;
+    /**
+     * 强制无重边，禁用函数
+     */
+    void SetMultiplyEdge(bool f) = delete;
+    /**
+     * 强制无自环，禁用函数
+     */
+    void SetSelfLoop(bool f) = delete;
+    /**
+     * 强制连通，禁用函数
+     */
+    void SetConnect(bool f) = delete;
+    /**
+     * 根据指定环大小生成图，如果不传入参数则随机环大小
+     * @param size 环大小
+     */
+    void GenGraph(int size = -1) {
+        edge.clear();
+        e.clear();
+        if (size == -1) {
+            size = rnd.next(3, node);
+        }
+        if (size > node || size < 3) {
+            FailGen("Cycle size must in [3 , %d], but found %d.\n", node, size);
+        }
+        size = std::min(size, node);
+        std::vector<int> p(node);
+        for (int i = 0; i < node; i++) {
+            p[i] = i;
+        }
+        shuffle(p.begin(), p.end());
+        CycleGraph cycle;
+        std::vector<int> pre(p.begin(), p.begin() + size);
+        cycle.GenGraph(pre);
+        edge = cycle.GetEdge();
+        for (int i = size; i < node; i++) {
+            int f = rnd.next(i);
+            AddEdge(p[i], p[f]);
+        }
+        shuffle(edge.begin(), edge.end());
+    }
+};
+/**
+ * 基环内向树
+ * @note 强制设self_loop=0,connect=1,multiply_edge=0,direction=1,side=n
+ */
+class PseudoInTree : public PseudoTree {
+   public:
+    /**
+     * @param n 结点数
+     * @attention n>=3,否则会产生问题
+     * @note 其余参数默认如下：
+     * @note side=n 边数固定
+     * @note direction=1 有向图
+     * @note multiply_edge=0 无重边
+     * @note self_loop=0 无自环
+     * @note connect=1 保证连通
+     */
+    PseudoInTree(int n = 3) {
+        node = n;
+        side = n;
+        direction = 1;
+        multiply_edge = 0;
+        self_loop = 0;
+        connect = 1;
+    }
+    /**
+     * 强制有向，禁用函数
+     */
+    void SetDirection(bool f) = delete;
+    /**
+     * 根据指定环大小生成图，如果不传入参数则随机环大小
+     * @param size 环大小
+     */
+    void GenGraph(int size = -1) {
+        edge.clear();
+        e.clear();
+        if (size == -1) {
+            size = rnd.next(3, node);
+        }
+        if (size > node || size < 3) {
+            FailGen("Cycle size must in [3 , %d], but found %d.\n", node, size);
+        }
+        size = std::min(size, node);
+        std::vector<int> p(node);
+        for (int i = 0; i < node; i++) {
+            p[i] = i;
+        }
+        shuffle(p.begin(), p.end());
+        CycleGraph cycle;
+        cycle.SetDirection(true);
+        std::vector<int> pre(p.begin(), p.begin() + size);
+        cycle.GenGraph(pre);
+        edge = cycle.GetEdge();
+        for (int i = size; i < node; i++) {
+            int f = rnd.next(i);
+            AddEdge(p[i], p[f]);
+        }
+        shuffle(edge.begin(), edge.end());
+    }
+};
+/**
+ * 基环外向树
+ * @note 强制设self_loop=0,connect=1,multiply_edge=0,direction=1,side=n
+ */
+class PseudoOutTree : public PseudoTree {
+   public:
+    /**
+     * @param n 结点数
+     * @attention n>=3,否则会产生问题
+     * @note 其余参数默认如下：
+     * @note side=n 边数固定
+     * @note direction=1 有向图
+     * @note multiply_edge=0 无重边
+     * @note self_loop=0 无自环
+     * @note connect=1 保证连通
+     */
+    PseudoOutTree(int n = 3) {
+        node = n;
+        side = n;
+        direction = 1;
+        multiply_edge = 0;
+        self_loop = 0;
+        connect = 1;
+    }
+    /**
+     * 强制有向，禁用函数
+     */
+    void SetDirection(bool f) = delete;
+    /**
+     * 根据指定环大小生成图，如果不传入参数则随机环大小
+     * @param size 环大小
+     */
+    void GenGraph(int size = -1) {
+        edge.clear();
+        e.clear();
+        if (size == -1) {
+            size = rnd.next(3, node);
+        }
+        if (size > node || size < 3) {
+            FailGen("Cycle size must in [3 , %d], but found %d.\n", node, size);
+        }
+        size = std::min(size, node);
+        std::vector<int> p(node);
+        for (int i = 0; i < node; i++) {
+            p[i] = i;
+        }
+        shuffle(p.begin(), p.end());
+        CycleGraph cycle;
+        cycle.SetDirection(1);
+        std::vector<int> pre(p.begin(), p.begin() + size);
+        cycle.GenGraph(pre);
+        edge = cycle.GetEdge();
+        for (int i = size; i < node; i++) {
+            int f = rnd.next(i);
+            AddEdge(p[f], p[i]);
+        }
+        shuffle(edge.begin(), edge.end());
+    }
+};
+/**
+ * 仙人掌
+ * @note 强制设self_loop=0,connect=1,multiply_edge=0,direction=0
+ * @note 仙人掌的边数的范围应该是[n-1,n-1+(n-1)/2]
+ */
+class Cactus : public Graph {
+   private:
+    virtual void JudgeUpper() {
+        int limit = node - 1 + (node - 1) / 2;
+        if (side > limit) {
+            FailGen("number of edges must less than or equal to %d.\n", limit);
+        }
+    }
+
+   public:
+    /**
+     * @param n 结点数
+     * @param m 边数
+     * @note 其余参数默认如下：
+     * @note direction=0 无向图
+     * @note multiply_edge=0 无重边
+     * @note self_loop=0 无自环
+     * @note connect=1 保证连通
+     */
+    Cactus(int n = 1, int m = 0) {
+        node = n;
+        side = m;
+        direction = 0;
+        multiply_edge = 0;
+        self_loop = 0;
+        connect = 1;
+    }
+    /**
+     * 强制无向，禁用函数
+     */
+    void SetDirection(bool f) = delete;
+    /**
+     * 强制有无重边，禁用函数
+     */
+    void SetMultiplyEdge(bool f) = delete;
+    /**
+     * 强制无自环，禁用函数
+     */
+    void SetSelfLoop(bool f) = delete;
+    /**
+     * 强制连通，禁用函数
+     */
+    void SetConnect(bool f) = delete;
+    /**
+     * 生成图
+     */
+    void GenGraph() {
+        edge.clear();
+        e.clear();
+        JudgeLimits();
+        int m = side;
+        m -= node - 1;
+        std::vector<std::vector<int>> cycle;
+        std::vector<int> p(node);
+        for (int i = 0; i < node; i++) {
+            p[i] = i;
+        }
+        shuffle(p.begin(), p.end());
+        for (int i = 2; i <= 2 * m; i += 2) {
+            std::vector<int> pre;
+            if (i == 2) {
+                pre.push_back(p[0]);
+            }
+            pre.push_back(p[i]);
+            pre.push_back(p[i - 1]);
+            cycle.push_back(pre);
+        }
+        int up = node - (2 * m + 1);
+        int add = rnd.next(0, up);
+        int len = cycle.size();
+        if (len == 0) {
+            add = 0;
+        }
+        for (int i = 2 * m + 1; i <= 2 * m + add; i++) {
+            int w = rnd.next(len);
+            cycle[w].push_back(p[i]);
+        }
+        for (int i = 2 * m + add + 1; i < node; i++) {
+            cycle.push_back({p[i]});
+        }
+        shuffle(cycle.begin() + 1, cycle.end());
+        for (int i = 0; i < cycle.size(); i++) {
+            CycleGraph c;
+            std::vector<int> pre = cycle[i];
+            if (i != 0) {
+                int w = rnd.next(i);
+                pre.push_back(rnd.any(cycle[w]));
+            }
+            c.GenGraph(pre);
+            std::vector<std::pair<int, int>> cycedge = c.GetEdge();
+            edge.insert(edge.end(), cycedge.begin(), cycedge.end());
+        }
+        shuffle(edge.begin(), edge.end());
+    }
+};
+}  // namespace generator
